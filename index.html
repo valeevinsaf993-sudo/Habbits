@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Привычки</title>
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Привычки">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--card2:#20242d;--tx:#eef0f4;--mut:#8a91a0;--line:#2a2f3a;--acc:#7c6cff;--ok:#2fbf71;--warn:#ffb020;--bad:#ff5d5d}
+body.light{--bg:#f4f5f8;--card:#fff;--card2:#eef0f4;--tx:#15171c;--mut:#6b7280;--line:#e2e5ea}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;overscroll-behavior:none;-webkit-user-select:none;user-select:none;background:var(--bg);color:var(--tx);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.app{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 90px)}
+h1{font-size:24px;margin:4px 0 2px}h2{font-size:18px;margin:18px 0 8px}
+.sub{color:var(--mut);font-size:13px}
+.row{display:flex;align-items:center;gap:10px}.sp{flex:1}
+.card{background:var(--card);border-radius:16px;padding:14px;margin:10px 0;border:1px solid var(--line)}
+button{font:inherit;color:inherit;background:var(--card2);border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+button.pri{background:var(--acc);color:#fff;font-weight:600}
+button.ghost{background:none;padding:6px}
+button.danger{background:var(--bad);color:#fff}
+input,select,textarea{-webkit-user-select:text;user-select:text;font:inherit;font-size:16px;color:var(--tx);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}
+label{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+.week{display:flex;gap:6px;margin:12px 0}
+.wd{flex:1;text-align:center;padding:8px 0;border-radius:12px;background:var(--card);border:1px solid var(--line);cursor:pointer;font-size:12px}
+.wd b{display:block;font-size:16px}
+.wd.sel{background:var(--acc);color:#fff;border-color:var(--acc)}
+.wd.today:not(.sel){border-color:var(--acc)}
+.habit{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin:8px 0}
+.emo{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;flex:none}
+.hn{font-weight:600}.hm{font-size:12px;color:var(--mut)}
+.chk{width:46px;height:46px;border-radius:50%;border:2px solid var(--line);background:none;padding:0;display:grid;place-items:center;font-size:18px;flex:none;position:relative}
+.chk.done{color:#fff}
+.chk svg{position:absolute;inset:-2px}
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+.tabs button{flex:1;max-width:140px;background:none;border-radius:0;padding:10px 0 8px;font-size:11px;color:var(--mut)}
+.tabs button span{display:block;font-size:20px}
+.tabs button.on{color:var(--acc)}
+.fab{position:fixed;right:max(18px,calc(50% - 262px));bottom:calc(env(safe-area-inset-bottom) + 76px);width:56px;height:56px;border-radius:50%;font-size:28px;background:var(--acc);color:#fff;box-shadow:0 6px 20px #0006;z-index:6}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;justify-content:center;z-index:10}
+.modal.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 20px)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:7px 12px;border-radius:20px;background:var(--card2);font-size:13px;cursor:pointer;border:1px solid transparent}
+.chip.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 25%,transparent)}
+.emogrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.emogrid div{font-size:22px;text-align:center;padding:5px;border-radius:8px;cursor:pointer}
+.emogrid div.on{background:var(--acc)}
+.colors{display:flex;gap:8px;flex-wrap:wrap}
+.colors div{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.colors div.on{border-color:var(--tx)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--card2);border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font-size:22px}
+.stat small{color:var(--mut);font-size:11px}
+.heat{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.heat div{aspect-ratio:1;border-radius:6px;background:var(--card2);font-size:10px;display:grid;place-items:center;color:var(--mut)}
+.year{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:2px;overflow-x:auto;padding-bottom:4px}
+.year div{width:9px;height:9px;border-radius:2px;background:var(--card2)}
+.bar{height:8px;border-radius:5px;background:var(--card2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:5px}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%);background:var(--card);border:1px solid var(--line);padding:12px 16px;border-radius:14px;z-index:20;box-shadow:0 8px 30px #0007;display:none;max-width:90%}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:12px}
+.cal div{padding:6px 0;border-radius:8px}
+.chart{display:flex;align-items:flex-end;gap:2px;height:110px}
+.chart div{flex:1;background:var(--acc);border-radius:3px 3px 0 0;min-height:2px}
+.seg{display:flex;background:var(--card2);border-radius:12px;padding:3px}
+.seg div{flex:1;text-align:center;padding:8px;border-radius:10px;cursor:pointer;font-size:13px}
+.seg div.on{background:var(--acc);color:#fff}
+.days7{display:flex;gap:4px}.days7 div{flex:1;text-align:center;padding:8px 0;border-radius:10px;background:var(--card2);cursor:pointer;font-size:13px}
+.days7 div.on{background:var(--acc);color:#fff}
+.mini{display:flex;gap:3px;margin-top:6px}.mini i{width:14px;height:6px;border-radius:3px;background:var(--card2)}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<button class="fab" id="fab" onclick="openEdit()">+</button>
+<nav class="tabs" id="tabs"></nav>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== Хранилище =====
+const KEY='habitfree_v1';
+let S={habits:[],goals:[],challenges:[],theme:'dark',tab:'today'};
+try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+let selDate=iso(new Date());
+
+// ===== Даты =====
+function iso(d){const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())}
+function pd(s){const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)}
+function add(s,n){const d=pd(s);d.setDate(d.getDate()+n);return iso(d)}
+function dow(s){return(pd(s).getDay()+6)%7} // 0=Пн
+function weekStart(s){return add(s,-dow(s))}
+const WD=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const MN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const MN1=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const today=()=>iso(new Date());
+function uid(){return Math.random().toString(36).slice(2,10)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function plural(n,a,b,c){n=Math.abs(n)%100;const m=n%10;if(n>10&&n<20)return c;if(m>1&&m<5)return b;if(m===1)return a;return c}
+
+// ===== Логика привычек =====
+const cnt=(h,d)=>(h.log&&h.log[d])||0;
+const done=(h,d)=>cnt(h,d)>=(h.target||1);
+function scheduled(h,d){
+  if(d<h.created)return false;
+  if(h.freq.type==='days')return h.freq.days.includes(dow(d));
+  return true;
+}
+function weekDone(h,ws){let n=0;for(let i=0;i<7;i++)if(done(h,add(ws,i)))n++;return n}
+function weekRate(h,ws){ // 0..1 прогресс недели
+  if(h.freq.type==='weekly')return Math.min(1,weekDone(h,ws)/h.freq.times);
+  let need=0,got=0;for(let i=0;i<7;i++){const d=add(ws,i);if(scheduled(h,d)&&d<=today()){need++;if(done(h,d))got++}}
+  if(h.freq.type==='days'){need=0;for(let i=0;i<7;i++)if(h.freq.days.includes(i))need++}else need=7;
+  return need?Math.min(1,got/need):0;
+}
+function streaks(h){
+  const t=today();let cur=0,best=0,run=0;
+  if(h.freq.type==='weekly'){
+    let ws=weekStart(h.created);const tw=weekStart(t);
+    while(ws<=tw){const ok=weekDone(h,ws)>=h.freq.times;
+      if(ok){run++;best=Math.max(best,run)}else if(ws<tw)run=0;ws=add(ws,7)}
+    cur=run;return{cur,best,unit:'нед.'}
+  }
+  let d=h.created;
+  while(d<=t){if(scheduled(h,d)){if(done(h,d)){run++;best=Math.max(best,run)}else if(d<t)run=0}d=add(d,1)}
+  return{cur:run,best,unit:'дн.'}
+}
+function rate(h,days=30){let need=0,got=0;for(let i=0;i<days;i++){const d=add(today(),-i);if(scheduled(h,d)){need++;if(done(h,d))got++}}return need?Math.round(got/need*100):0}
+function totalDone(h){return Object.keys(h.log||{}).filter(d=>done(h,d)).length}
+function active(){return S.habits.filter(h=>!h.archived)}
+function freqText(h){
+  if(h.freq.type==='daily')return'Каждый день';
+  if(h.freq.type==='weekly')return h.freq.times+' '+plural(h.freq.times,'раз','раза','раз')+' в неделю';
+  return h.freq.days.map(i=>WD[i]).join(', ');
+}
+
+// ===== Рендер =====
+function render(){
+  document.body.classList.toggle('light',S.theme==='light');
+  const tabs=[['today','✅','Сегодня'],['tog','👥','Вместе'],['stats','📊','Статистика'],['goals','🎯','Цели'],['ch','🏆','Челленджи'],['set','⚙️','Ещё']];
+  document.getElementById('tabs').innerHTML=tabs.map(t=>`<button class="${S.tab===t[0]?'on':''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
+  document.getElementById('fab').style.display=(S.tab==='today'||S.tab==='goals'||S.tab==='ch'||(S.tab==='tog'&&shReady()&&myNick()))?'':'none';
+  const v={today:vToday,tog:vTogether,stats:vStats,goals:vGoals,ch:vCh,set:vSet}[S.tab]();
+  document.getElementById('app').innerHTML=v;
+}
+function go(t){S.tab=t;save();render();scrollTo(0,0)}
+
+function ring(p,color,size=46,w=4){if(!(p>0))return '';const r=(size-w)/2,c=2*Math.PI*r;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${w}" stroke-dasharray="${c*p} ${c}" stroke-linecap="round" transform="rotate(-90 ${size/2} ${size/2})"/></svg>`}
+
+function vToday(){
+  const t=today(),ws=weekStart(selDate);
+  const d=pd(selDate);
+  let h=`<div class="row"><div><h1>${selDate===t?'Сегодня':WD[dow(selDate)]+', '+d.getDate()+' '+MN[d.getMonth()]}</h1><div class="sub">${d.getDate()} ${MN[d.getMonth()]} ${d.getFullYear()}</div></div><div class="sp"></div>
+  <button class="ghost" onclick="shiftWeek(-7)">‹</button><button class="ghost" onclick="selDate=today();render()">●</button><button class="ghost" onclick="shiftWeek(7)">›</button></div>`;
+  h+='<div class="week">';
+  for(let i=0;i<7;i++){const dd=add(ws,i);const sch=allHabits().filter(x=>scheduled(x,dd));const dn=sch.filter(x=>done(x,dd)).length;
+    h+=`<div class="wd ${dd===selDate?'sel':''} ${dd===t?'today':''}" onclick="selDate='${dd}';render()">${WD[i]}<b>${pd(dd).getDate()}</b>${sch.length?`<small>${dn}/${sch.length}</small>`:'<small>&nbsp;</small>'}</div>`}
+  h+='</div>';
+  const list=allHabits().filter(x=>scheduled(x,selDate));
+  if(!allHabits().length)return h+`<div class="empty"><div style="font-size:48px">🌱</div><p>Пока нет привычек.<br>Нажми «+», чтобы добавить первую.</p><button class="pri" onclick="openEdit()">Добавить привычку</button><p><button onclick="demo()">Заполнить примерами</button></p></div>`;
+  const dn=list.filter(x=>done(x,selDate)).length;
+  const p=list.length?dn/list.length:0;
+  h+=`<div class="card row"><div style="position:relative;width:64px;height:64px">${ring(1,'var(--card2)',64,7)}<div style="position:absolute;inset:0">${ring(p,'var(--acc)',64,7)}</div><div style="position:absolute;inset:0;display:grid;place-items:center;font-weight:700">${Math.round(p*100)}%</div></div>
+  <div><div class="hn">${dn} из ${list.length} выполнено</div><div class="sub">${p===1&&list.length?'Отличный день! 🎉':'Продолжай в том же духе'}</div></div></div>`;
+  const cats=[...new Set(list.map(x=>x.cat||'Без категории'))];
+  cats.forEach(c=>{
+    if(cats.length>1)h+=`<div class="sub" style="margin-top:12px">${esc(c)}</div>`;
+    list.filter(x=>(x.cat||'Без категории')===c).forEach(x=>h+=habitRow(x));
+  });
+  return h;
+}
+function habitRow(x){
+  const c=cnt(x,selDate),tg=x.target||1,ok=c>=tg,st=streaks(x);
+  const wr=weekRate(x,weekStart(selDate));
+  const fut=selDate>today();
+  return `<div class="habit">
+    <div class="emo" style="background:${x.color}33" onclick="openDetail('${x.id}')">${x.emoji}</div>
+    <div class="sp" onclick="openDetail('${x.id}')"><div class="hn">${esc(x.name)}</div>
+    <div class="hm">${tg>1?`${c}/${tg} ${esc(x.unit||'')} · `:''}🔥 ${st.cur} ${st.unit}${x.freq.type==='weekly'?` · ${weekDone(x,weekStart(selDate))}/${x.freq.times} за нед.`:''}${x.reminder?' · ⏰ '+x.reminder:''}</div>
+    ${x.shared?friendsLine(x.sid,selDate):''}
+    <div class="mini">${[...Array(7)].map((_,i)=>{const d=add(weekStart(selDate),i);return `<i style="${done(x,d)?'background:'+x.color:''}"></i>`}).join('')}</div></div>
+    ${tg>1&&!ok&&c>0?`<button class="ghost" onclick="tick('${x.id}',-1)" title="Минус">−</button>`:''}
+    <button class="chk ${ok?'done':''}" ${fut?'disabled style="opacity:.3"':''} style="${ok?'background:'+x.color+';border-color:'+x.color:''}" onclick="tick('${x.id}')">
+      ${!ok&&tg>1?ring(c/tg,x.color,50,4):''}${ok?'✓':(tg>1?c:'')}</button>
+  </div>`;
+}
+function shiftWeek(n){selDate=add(selDate,n);render()}
+function tick(id,delta){
+  if(id.startsWith('s:'))return tickShared(id.slice(2),delta);
+  const h=S.habits.find(x=>x.id===id);if(selDate>today())return;
+  h.log=h.log||{};const tg=h.target||1;let c=cnt(h,selDate);
+  if(delta===-1)c=Math.max(0,c-1);else if(c>=tg)c=0;else c++;
+  if(c)h.log[selDate]=c;else delete h.log[selDate];
+  save();render();
+  if(c===tg&&delta!==-1){const st=streaks(h);if(st.cur>0&&[3,7,14,21,30,50,66,100,200,365].includes(st.cur))toast(`🔥 Серия ${st.cur} ${st.unit} — «${h.name}»!`);
+    checkChallenges(h)}
+}
+
+// ===== Детали привычки =====
+let detMonth=null;
+function openDetail(id){if(id.startsWith('s:'))return openShared(id.slice(2));detMonth=today().slice(0,7);showDetail(id)}
+function showDetail(id){
+  const h=S.habits.find(x=>x.id===id);const st=streaks(h),t=today();
+  let s=`<div class="row"><div class="emo" style="background:${h.color}33">${h.emoji}</div><div class="sp"><h2 style="margin:0">${esc(h.name)}</h2><div class="sub">${freqText(h)}${h.cat?' · '+esc(h.cat):''}</div></div><button class="ghost" onclick="closeModal()">✕</button></div>`;
+  if(h.desc)s+=`<p class="sub">${esc(h.desc)}</p>`;
+  s+=`<div class="stats" style="margin-top:12px"><div class="stat"><b>🔥 ${st.cur}</b><small>Текущая серия, ${st.unit}</small></div><div class="stat"><b>🏅 ${st.best}</b><small>Рекорд, ${st.unit}</small></div><div class="stat"><b>${rate(h)}%</b><small>Выполнение за 30 дн.</small></div></div>`;
+  s+=`<div class="stats" style="margin-top:8px"><div class="stat"><b>${totalDone(h)}</b><small>Всего отметок</small></div><div class="stat"><b>${rate(h,7)}%</b><small>За 7 дней</small></div><div class="stat"><b>${rate(h,365)}%</b><small>За год</small></div></div>`;
+  // недельное кольцо
+  const wr=weekRate(h,weekStart(t));
+  s+=`<div class="card row"><div style="position:relative;width:70px;height:70px">${ring(1,'var(--card2)',70,8)}<div style="position:absolute;inset:0">${ring(wr,h.color,70,8)}</div><div style="position:absolute;inset:0;display:grid;place-items:center;font-weight:700">${Math.round(wr*100)}%</div></div><div><div class="hn">Прогресс недели</div><div class="sub">${h.freq.type==='weekly'?weekDone(h,weekStart(t))+' из '+h.freq.times:'Выполнено по плану на эту неделю'}</div></div></div>`;
+  // 4 недели
+  s+=`<div class="card"><div class="hn" style="margin-bottom:8px">Последние 4 недели</div><div class="heat">${WD.map(w=>`<div style="background:none">${w}</div>`).join('')}`;
+  const st4=add(weekStart(t),-21);
+  for(let i=0;i<28;i++){const d=add(st4,i);const c=cnt(h,d),p=Math.min(1,c/(h.target||1));
+    s+=`<div style="${p?`background:${h.color};opacity:${.35+.65*p};color:#fff`:''}${d===t?';outline:2px solid var(--acc)':''}">${pd(d).getDate()}</div>`}
+  s+='</div></div>';
+  // календарь месяца — можно отмечать прошлые дни
+  const [yy,mm]=detMonth.split('-').map(Number);const first=iso(new Date(yy,mm-1,1));const nd=new Date(yy,mm,0).getDate();
+  s+=`<div class="card"><div class="row"><button class="ghost" onclick="mon('${id}',-1)">‹</button><div class="sp hn" style="text-align:center">${MN1[mm-1]} ${yy}</div><button class="ghost" onclick="mon('${id}',1)">›</button></div><div class="cal">${WD.map(w=>`<div class="sub">${w}</div>`).join('')}`;
+  for(let i=0;i<dow(first);i++)s+='<div></div>';
+  for(let i=0;i<nd;i++){const d=add(first,i);const ok=done(h,d),pc=cnt(h,d);
+    s+=`<div onclick="calTick('${id}','${d}')" style="cursor:pointer;${ok?`background:${h.color};color:#fff`:pc?`background:${h.color}55`:''}${d===t?';outline:2px solid var(--acc)':''}${d>t?';opacity:.35':''}">${i+1}</div>`}
+  s+=`</div><div class="sub" style="margin-top:6px">Нажми на день, чтобы отметить или снять отметку</div></div>`;
+  // год
+  s+=`<div class="card"><div class="hn" style="margin-bottom:8px">Год</div><div class="year">`;
+  const ys=add(weekStart(t),-51*7);for(let i=0;i<52*7;i++){const d=add(ys,i);if(d>t){s+='<div style="opacity:0"></div>';continue}
+    s+=`<div style="${done(h,d)?'background:'+h.color:''}"></div>`}
+  s+='</div></div>';
+  // заметки
+  const notes=Object.entries(h.notes||{}).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10);
+  s+=`<div class="card"><div class="hn">Заметка за сегодня</div><textarea id="note" rows="2" placeholder="Как прошло?">${esc((h.notes||{})[t]||'')}</textarea><button style="margin-top:6px" onclick="saveNote('${id}')">Сохранить заметку</button>
+  ${notes.length?'<div style="margin-top:10px">'+notes.map(n=>`<div class="sub"><b>${pd(n[0]).getDate()} ${MN[pd(n[0]).getMonth()]}:</b> ${esc(n[1])}</div>`).join('')+'</div>':''}</div>`;
+  const g=S.goals.find(x=>x.id===h.goalId);if(g)s+=`<div class="sub">🎯 Связано с целью: <b>${esc(g.name)}</b></div>`;
+  s+=`<div class="row" style="margin-top:14px;flex-wrap:wrap"><button class="pri" onclick="openEdit('${id}')">✏️ Изменить</button><button onclick="archive('${id}')">${h.archived?'Вернуть':'📦 В архив'}</button><button class="danger" onclick="delHabit('${id}')">Удалить</button></div>`;
+  openModal(s);
+}
+function mon(id,n){const[y,m]=detMonth.split('-').map(Number);const d=new Date(y,m-1+n,1);detMonth=iso(d).slice(0,7);showDetail(id)}
+function calTick(id,d){if(d>today())return;const h=S.habits.find(x=>x.id===id);h.log=h.log||{};
+  if(done(h,d))delete h.log[d];else h.log[d]=h.target||1;if(d<h.created)h.created=d;save();showDetail(id);render()}
+function saveNote(id){const h=S.habits.find(x=>x.id===id);h.notes=h.notes||{};const v=document.getElementById('note').value.trim();if(v)h.notes[today()]=v;else delete h.notes[today()];save();toast('Заметка сохранена');showDetail(id)}
+function archive(id){const h=S.habits.find(x=>x.id===id);h.archived=!h.archived;save();closeModal();render()}
+let pendingDel=null;
+function delHabit(id){if(pendingDel!==id){pendingDel=id;toast('Нажми «Удалить» ещё раз для подтверждения');setTimeout(()=>pendingDel=null,3000);return}
+  S.habits=S.habits.filter(x=>x.id!==id);S.challenges=S.challenges.filter(c=>c.habitId!==id);save();closeModal();render();toast('Привычка удалена')}
+
+// ===== Создание/редактирование =====
+const EMO='💧🏃📚🧘💪🥗😴🦷💊🚭🍎☕🎸🎨✍️🧠🌅🚶🚴🏊🧹💰📵🙏❤️🌿🐶🎯⏰🧴🥛🍵📝💻🗣️🎧🌙'.match(/\p{Extended_Pictographic}️?/gu);
+const COL=['#7c6cff','#2fbf71','#ff5d5d','#ffb020','#29b6f6','#ff6fb5','#00c2a8','#a0785a','#9e9e9e','#ff8a3d'];
+const CATS=['Здоровье','Спорт','Саморазвитие','Осознанность','Продуктивность','Финансы','Быт','Отношения'];
+let E=null;
+function openEdit(id){
+  if(S.tab==='goals'&&!id)return openGoal();
+  if(S.tab==='ch'&&!id)return openCh();
+  if(id&&id.startsWith('s:')){const sh=SH.habits[id.slice(2)];if(!sh)return;E=JSON.parse(JSON.stringify({...sh,id,sid:sh.id,shared:true}));return drawEdit(true)}
+  if(S.tab==='tog'&&!id){if(!shReady()||!myNick())return toast('Сначала укажи своё имя');E={id:'new',sid:uid(),shared:true,name:'',emoji:'🏃',color:COL[1],cat:'Спорт',freq:{type:'daily',times:3,days:[0,1,2,3,4]},target:1,unit:'',desc:'',created:today()};return drawEdit(false)}
+  const h=id?S.habits.find(x=>x.id===id):null;
+  E=h?JSON.parse(JSON.stringify(h)):{id:uid(),name:'',emoji:'💧',color:COL[0],cat:'Здоровье',freq:{type:'daily',times:3,days:[0,1,2,3,4]},target:1,unit:'',reminder:'',goalId:'',desc:'',created:today(),log:{},notes:{}};
+  drawEdit(!!h);
+}
+function drawEdit(isEdit){
+  let s=`<div class="row"><h2 style="margin:0" class="sp">${E.shared?'👥 ':''}${isEdit?'Изменить привычку':(E.shared?'Общая привычка':'Новая привычка')}</h2><button class="ghost" onclick="closeModal()">✕</button></div>
+  <label>Название</label><input id="f_name" value="${esc(E.name)}" placeholder="Например: Пить воду" oninput="E.name=this.value">
+  <label>Описание (необязательно)</label><input value="${esc(E.desc)}" placeholder="Зачем это мне" oninput="E.desc=this.value">
+  <label>Иконка</label><div class="emogrid">${EMO.map(e=>`<div class="${E.emoji===e?'on':''}" onclick="E.emoji='${e}';drawEdit(${isEdit})">${e}</div>`).join('')}</div>
+  <label>Цвет</label><div class="colors">${COL.map(c=>`<div class="${E.color===c?'on':''}" style="background:${c}" onclick="E.color='${c}';drawEdit(${isEdit})"></div>`).join('')}</div>
+  <label>Категория</label><div class="chips">${[...new Set([...CATS,...S.habits.map(x=>x.cat).filter(Boolean)])].map(c=>`<div class="chip ${E.cat===c?'on':''}" onclick="E.cat='${esc(c)}';drawEdit(${isEdit})">${esc(c)}</div>`).join('')}</div>
+  <input style="margin-top:6px" placeholder="Своя категория" value="${CATS.includes(E.cat)?'':esc(E.cat)}" onchange="E.cat=this.value.trim();drawEdit(${isEdit})">
+  <label>Частота</label><div class="seg">${[['daily','Каждый день'],['days','По дням'],['weekly','N раз в неделю']].map(f=>`<div class="${E.freq.type===f[0]?'on':''}" onclick="E.freq.type='${f[0]}';drawEdit(${isEdit})">${f[1]}</div>`).join('')}</div>`;
+  if(E.freq.type==='days')s+=`<div class="days7" style="margin-top:8px">${WD.map((w,i)=>`<div class="${E.freq.days.includes(i)?'on':''}" onclick="togDay(${i},${isEdit})">${w}</div>`).join('')}</div>`;
+  if(E.freq.type==='weekly')s+=`<div class="days7" style="margin-top:8px">${[1,2,3,4,5,6].map(n=>`<div class="${E.freq.times===n?'on':''}" onclick="E.freq.times=${n};drawEdit(${isEdit})">${n}</div>`).join('')}</div>`;
+  s+=`<label>Цель за день (сколько раз)</label><div class="row"><input type="number" min="1" max="999" value="${E.target}" oninput="E.target=Math.max(1,+this.value||1)" style="width:100px"><input placeholder="единица: стаканов, страниц…" value="${esc(E.unit)}" oninput="E.unit=this.value"></div>`;
+  if(E.shared)s+=`<div class="sub" style="margin-top:12px">Эту привычку увидят все, у кого есть доступ к приложению, и смогут присоединиться.</div>`;
+  else s+=`<label>Напоминание</label><input type="time" value="${E.reminder}" oninput="E.reminder=this.value">
+  <label>Связать с целью</label><select onchange="E.goalId=this.value"><option value="">— без цели —</option>${S.goals.map(g=>`<option value="${g.id}" ${E.goalId===g.id?'selected':''}>${esc(g.emoji+' '+g.name)}</option>`).join('')}</select>
+  `;
+  s+=`<button class="pri" style="width:100%;margin-top:18px" onclick="saveHabit()">${isEdit?'Сохранить':'Создать привычку'}</button>`;
+  if(!isEdit)s+=`<div class="sub" style="margin-top:14px">Быстрый старт:</div><div class="chips" style="margin-top:6px">${TPL.map((t,i)=>`<div class="chip" onclick="useTpl(${i})">${t[1]} ${t[0]}</div>`).join('')}</div>`;
+  openModal(s);
+}
+const TPL=[['Пить воду','💧','Здоровье',8,'стаканов'],['Читать','📚','Саморазвитие',20,'страниц'],['Медитация','🧘','Осознанность',1,''],['Зарядка','💪','Спорт',1,''],['10 000 шагов','🚶','Спорт',1,''],['Без телефона перед сном','📵','Здоровье',1,''],['Ранний подъём','🌅','Продуктивность',1,''],['Дневник','✍️','Осознанность',1,'']];
+function useTpl(i){const t=TPL[i];Object.assign(E,{name:t[0],emoji:t[1],cat:t[2],target:t[3],unit:t[4]});drawEdit(false)}
+function togDay(i,ie){const d=E.freq.days;E.freq.days=d.includes(i)?d.filter(x=>x!==i):[...d,i].sort();drawEdit(ie)}
+function saveHabit(){
+  if(!E.name.trim()){toast('Введи название');return}
+  if(E.freq.type==='days'&&!E.freq.days.length){toast('Выбери хотя бы один день');return}
+  E.name=E.name.trim();
+  if(E.shared)return saveShared();
+  const i=S.habits.findIndex(x=>x.id===E.id);
+  if(i>=0)S.habits[i]=E;else S.habits.push(E);save();closeModal();render();toast(i>=0?'Сохранено':'Привычка добавлена ✨')}
+
+// ===== Статистика =====
+function vStats(){
+  const hs=active();if(!hs.length)return '<h1>Статистика</h1><div class="empty">Добавь привычки, чтобы увидеть статистику</div>';
+  const t=today();let s='<h1>Статистика</h1>';
+  // общий процент по дням (30 дней)
+  const days=[];for(let i=29;i>=0;i--){const d=add(t,-i);const sc=hs.filter(h=>scheduled(h,d));days.push([d,sc.length?sc.filter(h=>done(h,d)).length/sc.length:0])}
+  const avg=Math.round(days.reduce((a,b)=>a+b[1],0)/days.length*100);
+  const perfect=days.filter(d=>d[1]===1).length;
+  const bestStreak=Math.max(...hs.map(h=>streaks(h).best));
+  s+=`<div class="stats"><div class="stat"><b>${avg}%</b><small>Среднее за 30 дн.</small></div><div class="stat"><b>${perfect}</b><small>Идеальных дней</small></div><div class="stat"><b>🏅${bestStreak}</b><small>Лучшая серия</small></div></div>`;
+  s+=`<div class="card"><div class="hn">Выполнение по дням (30 дн.)</div><div class="chart" style="margin-top:10px">${days.map(d=>`<div title="${d[0]}" style="height:${Math.max(2,d[1]*100)}%;opacity:${d[0]===t?1:.75}"></div>`).join('')}</div><div class="row sub"><span>${pd(days[0][0]).getDate()} ${MN[pd(days[0][0]).getMonth()]}</span><span class="sp"></span><span>сегодня</span></div></div>`;
+  // по дням недели
+  const byW=[0,0,0,0,0,0,0],nW=[0,0,0,0,0,0,0];for(let i=0;i<84;i++){const d=add(t,-i);hs.forEach(h=>{if(scheduled(h,d)){nW[dow(d)]++;if(done(h,d))byW[dow(d)]++}})}
+  s+=`<div class="card"><div class="hn">По дням недели (12 нед.)</div><div class="chart" style="height:80px;margin-top:10px">${byW.map((v,i)=>`<div style="height:${nW[i]?Math.max(2,v/nW[i]*100):2}%"></div>`).join('')}</div><div class="row sub">${WD.map(w=>`<span style="flex:1;text-align:center">${w}</span>`).join('')}</div></div>`;
+  // по категориям
+  const cats={};hs.forEach(h=>{const c=h.cat||'Без категории';cats[c]=cats[c]||[];cats[c].push(rate(h))});
+  s+=`<div class="card"><div class="hn" style="margin-bottom:8px">По категориям</div>${Object.entries(cats).map(([c,a])=>{const v=Math.round(a.reduce((x,y)=>x+y,0)/a.length);return `<div class="row sub" style="margin-top:6px"><span>${esc(c)}</span><span class="sp"></span><span>${v}%</span></div><div class="bar"><i style="width:${v}%"></i></div>`}).join('')}</div>`;
+  // рейтинг привычек
+  s+=`<div class="card"><div class="hn" style="margin-bottom:6px">Привычки (30 дн.)</div>${[...hs].sort((a,b)=>rate(b)-rate(a)).map(h=>{const r=rate(h),st=streaks(h);return `<div class="row" style="margin-top:10px" onclick="openDetail('${h.id}')"><span style="font-size:20px">${h.emoji}</span><div class="sp"><div class="row"><span>${esc(h.name)}</span><span class="sp"></span><span class="sub">🔥${st.cur} · ${r}%</span></div><div class="bar"><i style="width:${r}%;background:${h.color}"></i></div></div></div>`}).join('')}</div>`;
+  const arch=S.habits.filter(h=>h.archived);
+  if(arch.length)s+=`<h2>Архив</h2>${arch.map(h=>`<div class="habit" onclick="openDetail('${h.id}')"><div class="emo" style="background:${h.color}33">${h.emoji}</div><div class="sp hn">${esc(h.name)}</div><span class="sub">${totalDone(h)} отм.</span></div>`).join('')}`;
+  return s;
+}
+
+// ===== Цели =====
+function goalProg(g){const hs=active().filter(h=>h.goalId===g.id);if(!hs.length)return{p:0,hs};
+  if(g.targetCount){const tot=hs.reduce((a,h)=>a+Object.entries(h.log||{}).filter(([d])=>d>=g.created).reduce((x,[,v])=>x+v,0),0);return{p:Math.min(1,tot/g.targetCount),hs,tot}}
+  return{p:hs.reduce((a,h)=>a+rate(h),0)/hs.length/100,hs}}
+function vGoals(){
+  let s='<h1>Цели</h1><div class="sub">Связывай привычки с целями и следи, как ежедневные действия ведут к результату.</div>';
+  if(!S.goals.length)return s+`<div class="empty"><div style="font-size:48px">🎯</div><p>Целей пока нет</p><button class="pri" onclick="openGoal()">Добавить цель</button></div>`;
+  S.goals.forEach(g=>{const{p,hs,tot}=goalProg(g);const left=g.deadline?Math.ceil((pd(g.deadline)-pd(today()))/864e5):null;
+    s+=`<div class="card"><div class="row"><span style="font-size:26px">${g.emoji}</span><div class="sp"><div class="hn">${esc(g.name)}</div><div class="sub">${g.targetCount?`${tot||0} / ${g.targetCount} ${esc(g.unit||'')}`:'Средняя дисциплина по привычкам'}${left!==null?` · ${left>=0?'осталось '+left+' '+plural(left,'день','дня','дней'):'срок прошёл'}`:''}</div></div><b>${Math.round(p*100)}%</b><button class="ghost" onclick="openGoal('${g.id}')">✏️</button></div>
+    <div class="bar" style="margin-top:10px"><i style="width:${p*100}%"></i></div>
+    <div class="chips" style="margin-top:10px">${hs.length?hs.map(h=>`<div class="chip" onclick="openDetail('${h.id}')">${h.emoji} ${esc(h.name)} · ${rate(h)}%</div>`).join(''):'<span class="sub">Нет связанных привычек — привяжи их в настройках привычки</span>'}</div></div>`});
+  return s;
+}
+let G=null;
+function openGoal(id){const g=id?S.goals.find(x=>x.id===id):null;G=g?{...g}:{id:uid(),name:'',emoji:'🎯',deadline:'',targetCount:'',unit:'',created:today()};
+  const EG=['🎯','🏆','💪','📚','💰','🏃','🧠','❤️','🌍','🚀','🏠','✈️'];
+  openModal(`<div class="row"><h2 class="sp" style="margin:0">${g?'Изменить цель':'Новая цель'}</h2><button class="ghost" onclick="closeModal()">✕</button></div>
+  <label>Название</label><input value="${esc(G.name)}" placeholder="Например: Пробежать полумарафон" oninput="G.name=this.value">
+  <label>Иконка</label><div class="chips">${EG.map(e=>`<div class="chip ${G.emoji===e?'on':''}" onclick="G.emoji='${e}';this.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div>
+  <label>Срок (необязательно)</label><input type="date" value="${G.deadline}" oninput="G.deadline=this.value">
+  <label>Числовая цель (необязательно) — сумма отметок связанных привычек</label><div class="row"><input type="number" style="width:110px" value="${G.targetCount}" placeholder="500" oninput="G.targetCount=+this.value||''"><input placeholder="страниц, км…" value="${esc(G.unit)}" oninput="G.unit=this.value"></div>
+  <label>Привязать привычки</label><div class="chips">${active().map(h=>`<div class="chip ${h.goalId===G.id?'on':''}" onclick="this.classList.toggle('on');this.dataset.t=1" data-h="${h.id}">${h.emoji} ${esc(h.name)}</div>`).join('')||'<span class="sub">Сначала создай привычки</span>'}</div>
+  <button class="pri" style="width:100%;margin-top:18px" onclick="saveGoal()">Сохранить</button>${g?`<button class="danger" style="width:100%;margin-top:8px" onclick="delGoal('${g.id}')">Удалить цель</button>`:''}`)}
+function saveGoal(){if(!G.name.trim())return toast('Введи название');
+  document.querySelectorAll('#sheet [data-h]').forEach(el=>{const h=S.habits.find(x=>x.id===el.dataset.h);if(el.classList.contains('on'))h.goalId=G.id;else if(h.goalId===G.id)h.goalId=''});
+  const i=S.goals.findIndex(x=>x.id===G.id);if(i>=0)S.goals[i]=G;else S.goals.push(G);save();closeModal();render()}
+function delGoal(id){S.goals=S.goals.filter(g=>g.id!==id);S.habits.forEach(h=>{if(h.goalId===id)h.goalId=''});save();closeModal();render()}
+
+// ===== Челленджи =====
+function chProg(c){const h=S.habits.find(x=>x.id===c.habitId);if(!h)return null;let got=0,missed=0;
+  for(let i=0;i<c.days;i++){const d=add(c.start,i);if(d>today())break;if(done(h,d))got++;else if(d<today())missed++}
+  const end=add(c.start,c.days-1);const status=got>=c.days?'win':(missed>c.lives?'lose':(today()>end?'lose':'run'));return{h,got,missed,end,status}}
+function vCh(){
+  let s='<h1>Челленджи</h1><div class="sub">Брось себе вызов: N дней подряд с ограниченным числом пропусков. Пропустил больше — челлендж проигран.</div>';
+  if(!S.challenges.length)return s+`<div class="empty"><div style="font-size:48px">🏆</div><p>Активных челленджей нет</p><button class="pri" onclick="openCh()">Начать челлендж</button></div>`;
+  S.challenges.forEach(c=>{const p=chProg(c);if(!p)return;
+    const lbl={win:'🏆 Пройден!',lose:'💔 Провален',run:`Жизни: ${'❤️'.repeat(Math.max(0,c.lives-p.missed))}${'🖤'.repeat(Math.min(c.lives,p.missed))||''}`}[p.status];
+    s+=`<div class="card"><div class="row"><span style="font-size:26px">${p.h.emoji}</span><div class="sp"><div class="hn">${c.days} дней: ${esc(p.h.name)}</div><div class="sub">${lbl}${c.lives===0&&p.status==='run'?'Без права на пропуск':''}</div></div><b>${p.got}/${c.days}</b></div>
+    <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:10px">${[...Array(c.days)].map((_,i)=>{const d=add(c.start,i);return `<i style="width:12px;height:12px;border-radius:3px;background:${done(p.h,d)?p.h.color:(d<today()?'var(--bad)':'var(--card2)')};opacity:${d<today()&&!done(p.h,d)?.5:1}"></i>`}).join('')}</div>
+    ${c.stake?`<div class="sub" style="margin-top:8px">Ставка: ${esc(c.stake)}</div>`:''}
+    <div class="row" style="margin-top:8px"><span class="sub sp">${pd(c.start).getDate()} ${MN[pd(c.start).getMonth()]} → ${pd(p.end).getDate()} ${MN[pd(p.end).getMonth()]}</span><button class="ghost sub" onclick="delCh('${c.id}')">Удалить</button></div></div>`});
+  return s;
+}
+function openCh(){if(!active().length)return toast('Сначала создай привычку');
+  openModal(`<div class="row"><h2 class="sp" style="margin:0">Новый челлендж</h2><button class="ghost" onclick="closeModal()">✕</button></div>
+  <label>Привычка</label><select id="c_h">${active().map(h=>`<option value="${h.id}">${h.emoji} ${esc(h.name)}</option>`).join('')}</select>
+  <label>Длительность</label><select id="c_d">${[7,14,21,30,66,100].map(n=>`<option ${n===30?'selected':''}>${n}</option>`).join('')}</select>
+  <label>Допустимые пропуски («жизни»)</label><select id="c_l">${[0,1,2,3,5].map(n=>`<option ${n===2?'selected':''}>${n}</option>`).join('')}</select>
+  <label>Начало</label><input type="date" id="c_s" value="${today()}">
+  <label>Ставка или награда (необязательно)</label><input id="c_st" placeholder="Проиграю — куплю другу кофе ☕">
+  <button class="pri" style="width:100%;margin-top:18px" onclick="saveCh()">Начать</button>`)}
+function saveCh(){S.challenges.push({id:uid(),habitId:v('c_h'),days:+v('c_d'),lives:+v('c_l'),start:v('c_s')||today(),stake:v('c_st')});save();closeModal();render();toast('Челлендж начат! 💪')}
+function v(id){return document.getElementById(id).value}
+function delCh(id){S.challenges=S.challenges.filter(c=>c.id!==id);save();render()}
+function checkChallenges(h){S.challenges.filter(c=>c.habitId===h.id&&!c.won).forEach(c=>{const p=chProg(c);if(p&&p.status==='win'){c.won=1;save();setTimeout(()=>toast(`🏆 Челлендж «${h.name}» на ${c.days} дней пройден!`),1200)}})}
+
+// ===== Настройки =====
+function vSet(){
+  return `<h1>Ещё</h1>
+  <div class="card"><div class="hn">Тема</div><div class="seg" style="margin-top:8px"><div class="${S.theme==='dark'?'on':''}" onclick="S.theme='dark';save();render()">🌙 Тёмная</div><div class="${S.theme==='light'?'on':''}" onclick="S.theme='light';save();render()">☀️ Светлая</div></div></div>
+  <div class="card"><div class="hn">Резервная копия</div><div class="sub">Данные хранятся только в этом браузере. Скопируй резервную копию, чтобы перенести на другое устройство или не потерять.</div>
+  <div class="row" style="margin-top:10px"><button onclick="exportData()">📋 Скопировать копию</button><button onclick="showImport()">📥 Восстановить</button></div><div id="io"></div></div>
+  <div class="card"><div class="hn">Уведомления</div><div class="sub">Напоминания приходят в указанное время, пока приложение открыто или недавно свёрнуто. На iPhone нужен iOS 16.4+ и запуск с экрана «Домой».</div>
+  <button style="margin-top:8px" onclick="askNotif()">${typeof Notification!=='undefined'&&Notification.permission==='granted'?'✅ Уведомления включены':'🔔 Включить уведомления'}</button></div>
+  ${TEAM?`<div class="card"><div class="hn">Команда</div><div class="sub">Код: ${esc(TEAM)}</div><div class="row" style="margin-top:8px"><button onclick="leaveTeam()">Выйти из команды</button><button onclick="resetShared()">Сбросить сервер</button></div></div>`:''}
+  <div class="card"><div class="hn">Итого</div><div class="sub">Привычек: ${S.habits.length} · Целей: ${S.goals.length} · Челленджей: ${S.challenges.length} · Отметок: ${S.habits.reduce((a,h)=>a+totalDone(h),0)}</div></div>
+  <button class="danger" style="width:100%" onclick="resetAll()">Удалить все данные</button>
+  <p class="sub" style="text-align:center;margin-top:20px">Полностью бесплатно · без рекламы · без подписок</p>`}
+function exportData(){const t=JSON.stringify({habits:S.habits,goals:S.goals,challenges:S.challenges});
+  const done_=()=>toast('Копия скопирована — сохрани её в заметках');
+  try{navigator.clipboard.writeText(t).then(done_,()=>showText(t))}catch(e){showText(t)}}
+function showText(t){document.getElementById('io').innerHTML=`<textarea rows="4" style="margin-top:8px" onclick="this.select()">${esc(t)}</textarea><div class="sub">Выдели и скопируй текст</div>`}
+function showImport(){document.getElementById('io').innerHTML=`<textarea id="imp" rows="4" style="margin-top:8px" placeholder="Вставь сюда резервную копию"></textarea><button class="pri" style="margin-top:6px" onclick="doImport()">Восстановить</button>`}
+function doImport(){try{const d=JSON.parse(v('imp'));if(!Array.isArray(d.habits))throw 0;S.habits=d.habits;S.goals=d.goals||[];S.challenges=d.challenges||[];save();render();toast('Данные восстановлены ✅')}catch(e){toast('Не получилось прочитать копию')}}
+let rs=0;function resetAll(){if(!rs){rs=1;toast('Нажми ещё раз, чтобы удалить всё');setTimeout(()=>rs=0,3000);return}S.habits=[];S.goals=[];S.challenges=[];save();render();toast('Все данные удалены')}
+
+// ===== Демо =====
+function demo(){
+  const mk=(name,emoji,color,cat,freq,target,unit,p)=>{const h={id:uid(),name,emoji,color,cat,freq,target,unit,reminder:'',goalId:'',desc:'',created:add(today(),-60),log:{},notes:{}};
+    for(let i=1;i<=60;i++){const d=add(today(),-i);if(scheduled(h,d)&&Math.random()<p)h.log[d]=target}return h};
+  const g={id:uid(),name:'Стать здоровее',emoji:'❤️',deadline:add(today(),90),targetCount:'',unit:'',created:today()};
+  const a=mk('Пить воду','💧','#29b6f6','Здоровье',{type:'daily',times:3,days:[]},8,'стаканов',.85);a.goalId=g.id;
+  const b=mk('Читать','📚','#ffb020','Саморазвитие',{type:'daily',times:3,days:[]},1,'',.7);
+  const c=mk('Тренировка','💪','#ff5d5d','Спорт',{type:'weekly',times:3,days:[]},1,'',.45);c.goalId=g.id;
+  const d=mk('Медитация','🧘','#2fbf71','Осознанность',{type:'days',times:3,days:[0,1,2,3,4]},1,'',.8);
+  S.habits.push(a,b,c,d);S.goals.push(g);S.challenges.push({id:uid(),habitId:b.id,days:30,lives:2,start:add(today(),-10),stake:'Награда — новая книга'});
+  save();render();
+}
+
+// ===== Совместные привычки (общее хранилище) =====
+let DB=null,MEK=null,shState='loading',canWrite=true,openSh=null;
+const SH={habits:{},checks:{},people:{},feed:[]};
+const shReady=()=>shState==='ready'&&!!MEK;
+const myNick=()=>MEK&&SH.people[MEK]&&SH.people[MEK].nick;
+function nm(u){const p=SH.people[u];return p&&p.nick?p.nick:'Друг'}
+function av(u){const p=SH.people[u];return (p&&p.emoji)||'🙂'}
+function members(hid){return Object.values(SH.checks).filter(c=>c.hid===hid).map(c=>c.u)}
+function shAsHabit(sh,u=MEK){const c=SH.checks[sh.id+'__'+u];return{...sh,id:'s:'+sh.id,sid:sh.id,shared:true,log:(c&&c.log)||{},notes:{}}}
+function mySharedHabits(){if(!shReady())return[];return Object.values(SH.habits).filter(h=>SH.checks[h.id+'__'+MEK]&&h.freq).map(h=>shAsHabit(h))}
+function allHabits(){return active().concat(mySharedHabits())}
+function friendsLine(hid,d){const sh=SH.habits[hid];if(!sh)return'';
+  const fr=members(hid).filter(u=>u!==MEK);if(!fr.length)return'<div class="hm">👥 Пока только ты — позови друга</div>';
+  return '<div class="hm">👥 '+fr.map(u=>`${av(u)} ${esc(nm(u))} ${done(shAsHabit(sh,u),d)?'✅':'⏳'}`).join(' · ')+'</div>'}
+const wq={};
+function w(path,fn){wq[path]=(wq[path]||Promise.resolve()).then(fn).catch(e=>{
+  if(e&&e.code==='invalid_argument'){canWrite=false;toast('Нет прав на изменение — владелец должен дать тебе роль «Редактор»')}
+  else if(e&&e.code==='quota_exceeded')toast('Общее хранилище заполнено');
+  else toast('Не удалось сохранить, проверь интернет')});return wq[path]}
+function feed(type,hid,to){if(!DB)return;const sh=SH.habits[hid];
+  DB.collection('feed').add({type,from:MEK,to:to||'',hid:hid||'',hname:sh?sh.emoji+' '+sh.name:'',at:Date.now()}).catch(()=>{})}
+
+// ---- Firebase ----
+// Можно вписать конфиг прямо сюда, тогда друзьям нужен только код команды:
+const FIREBASE_CONFIG=null;
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+function getCfg(){if(FIREBASE_CONFIG)return FIREBASE_CONFIG;try{return JSON.parse(lsGet('hf_cfg')||'null')}catch(e){return null}}
+let TEAM=lsGet('hf_team');
+function b64e(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/=+$/,'')}
+function b64d(s){return JSON.parse(decodeURIComponent(escape(atob(s))))}
+function parseInvite(str){str=String(str||'').trim();const m=str.match(/#join=([^&\s]+)/);if(m)str=m[1];
+  if(/^[A-Z0-9]{6,10}$/i.test(str))return{t:str.toUpperCase()};
+  try{const o=b64d(str);if(o&&o.t)return o}catch(e){}return null}
+// приглашение из ссылки
+(function(){const m=location.hash.match(/#join=([^&]+)/);if(!m)return;const inv=parseInvite(m[0]);
+  if(inv){if(inv.c&&!FIREBASE_CONFIG)lsSet('hf_cfg',JSON.stringify(inv.c));lsSet('hf_team',inv.t);TEAM=inv.t;S.tab='tog'}
+  history.replaceState(null,'',location.pathname)})();
+function parseCfg(txt){ // принимает JSON или кусок JS из консоли Firebase
+  const t=String(txt).trim();try{return JSON.parse(t)}catch(e){}
+  const o={};['apiKey','authDomain','projectId','storageBucket','messagingSenderId','appId'].forEach(k=>{const m=t.match(new RegExp(k+'\\s*:\\s*["\']([^"\']+)["\']'));if(m)o[k]=m[1]});
+  return o.apiKey&&o.projectId?o:null}
+let unsubs=[];
+function startShared(){
+  unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[];
+  const cfg=getCfg();
+  if(!cfg){shState='nocfg';render();return}
+  if(typeof firebase==='undefined'){shState='off';render();return}
+  if(!TEAM){shState='noteam';render();return}
+  shState='loading';render();
+  const timer=setTimeout(()=>{if(shState==='loading'){shState='slow';render()}},10000);
+  try{
+    if(!firebase.apps.length)firebase.initializeApp(cfg);
+    const fs=firebase.firestore();
+    if(!window.__pers){window.__pers=1;fs.enablePersistence({synchronizeTabs:true}).catch(()=>{})}
+    const TP='teams/'+TEAM+'/';
+    DB={collection:p=>fs.collection(TP+p),doc:p=>fs.doc(TP+p)};
+    firebase.auth().signInAnonymously().catch(e=>{clearTimeout(timer);shState='err';shErr=e.code||e.message;render()});
+    const off=firebase.auth().onAuthStateChanged(u=>{
+      if(!u)return;off();MEK=u.uid;
+      let got=0;const ok=()=>{got++;if(got>=3){clearTimeout(timer);shState='ready'}render();if(openSh&&document.getElementById('modal').classList.contains('on'))showShared(openSh)};
+      const err=e=>{clearTimeout(timer);shState='err';shErr=e.code||e.message;render()};
+      const snap=s=>s.docs.map(d=>[d.id,d.data()]);
+      unsubs.push(DB.collection('shared').onSnapshot(s=>{SH.habits={};snap(s).forEach(([id,d])=>SH.habits[id]={...d,id});ok()},err));
+      unsubs.push(DB.collection('checks').onSnapshot(s=>{SH.checks={};snap(s).forEach(([id,d])=>SH.checks[id]=d);ok()},err));
+      unsubs.push(DB.collection('people').onSnapshot(s=>{SH.people={};snap(s).forEach(([id,d])=>SH.people[id]=d);ok()},err));
+      unsubs.push(DB.collection('feed').orderBy('at','desc').limit(40).onSnapshot(s=>{SH.feed=snap(s).map(([id,d])=>({...d,id}));
+        const seen=+lsGet('hf_seen')||0;
+        const mine=SH.feed.filter(f=>f.to===MEK&&f.at>seen);
+        if(mine.length&&seen){const f=mine[0];const msg=f.type==='cheer'?`${nm(f.from)} подбадривает тебя: ${f.hname} 💪`:`${nm(f.from)} напоминает: ${f.hname} ⏰`;toast(av(f.from)+' '+msg);notify(msg)}
+        lsSet('hf_seen',String(Date.now()));
+        if(S.tab==='tog')render()},()=>{}));
+    });
+  }catch(e){clearTimeout(timer);shState='err';shErr=e.message;render()}
+}
+let shErr='';
+window.addEventListener('load',()=>setTimeout(startShared,0));
+
+function vTogether(){
+  let s='<h1>Вместе</h1><div class="sub">Общие привычки с друзьями: видите отметки друг друга, соревнуетесь и держите серию вместе.</div>';
+  if(shState==='loading')return s+'<div class="empty">Загрузка…</div>';
+  if(shState==='slow')return s+'<div class="empty">Не удаётся связаться с хранилищем. Проверь интернет — данные появятся автоматически.</div>';
+  if(shState==='nocfg')return s+`<div class="card"><div class="hn">Есть приглашение от друга?</div><div class="sub">Вставь ссылку или код приглашения.</div><input id="inv" style="margin-top:8px" placeholder="Ссылка или код"><button class="pri" style="width:100%;margin-top:8px" onclick="useInvite()">Присоединиться</button></div>
+    <div class="card"><div class="hn">Или подключи свой сервер (один раз)</div><div class="sub" style="margin-top:6px">1. Зайди на console.firebase.google.com → «Создать проект» (бесплатно).<br>2. Build → Authentication → Начать → включи «Anonymous».<br>3. Build → Firestore Database → Создать базу. Во вкладке «Правила» вставь правила из инструкции и нажми «Опубликовать».<br>4. Настройки проекта (⚙️) → «Ваши приложения» → значок &lt;/&gt; → зарегистрируй приложение и скопируй firebaseConfig.<br>5. Вставь его сюда:</div>
+    <textarea id="cfg" rows="5" style="margin-top:8px" placeholder="const firebaseConfig = { apiKey: ... }"></textarea><button class="pri" style="width:100%;margin-top:8px" onclick="saveCfg()">Подключить</button></div>`;
+  if(shState==='noteam')return s+`<div class="card"><div class="hn">Команда</div><div class="sub">Привычки видят только участники одной команды. Создай свою или введи код друга.</div>
+    <button class="pri" style="width:100%;margin-top:10px" onclick="newTeam()">Создать команду</button>
+    <input id="inv" style="margin-top:10px" placeholder="Код или ссылка приглашения"><button style="width:100%;margin-top:8px" onclick="useInvite()">Присоединиться к другу</button></div>`;
+  if(shState==='off')return s+`<div class="card"><div class="hn">Нет подключения</div><div class="sub">Для первого запуска совместного режима нужен интернет. Личные привычки работают и без него.</div><button style="margin-top:8px" onclick="location.reload()">Повторить</button></div>`;
+  if(shState==='err')return s+`<div class="card"><div class="hn">Ошибка подключения</div><div class="sub">${esc(shErr)}<br>Проверь, что в Firebase включён вход «Anonymous» и опубликованы правила Firestore.</div><div class="row" style="margin-top:8px"><button onclick="startShared()">Повторить</button><button onclick="resetShared()">Сбросить настройки</button></div></div>`;
+  if(!myNick())return s+`<div class="card"><div class="hn">Как тебя зовут?</div><div class="sub">Это имя увидят друзья.</div>
+    <input id="nick" style="margin-top:10px" maxlength="20" placeholder="Имя"><div class="chips" style="margin-top:8px" id="avs">${['🙂','😎','🦊','🐼','🐯','🦁','🐸','🐙','🦄','🔥','⚡','🌟'].map((e,i)=>`<div class="chip ${i?'':'on'}" data-e="${e}" onclick="document.querySelectorAll('#avs .chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div>
+    <button class="pri" style="width:100%;margin-top:12px" onclick="saveNick()">Продолжить</button></div>${inviteCard()}`;
+  const mine=Object.values(SH.habits).filter(h=>SH.checks[h.id+'__'+MEK]);
+  const other=Object.values(SH.habits).filter(h=>!SH.checks[h.id+'__'+MEK]);
+  s+=`<div class="row card"><span style="font-size:28px">${av(MEK)}</span><div class="sp"><div class="hn">${esc(myNick())}</div><div class="sub">${Object.keys(SH.people).length} ${plural(Object.keys(SH.people).length,'участник','участника','участников')} · ${mine.length} ${plural(mine.length,'общая привычка','общие привычки','общих привычек')}</div></div><button class="ghost" onclick="renameMe()">✏️</button></div>`;
+  if(!canWrite)s+=`<div class="card sub">У тебя доступ только для просмотра. Попроси владельца дать тебе роль «Редактор».</div>`;
+  s+='<h2>Мои общие привычки</h2>';
+  if(!mine.length)s+=`<div class="empty" style="padding:16px"><p>Нет общих привычек</p><button class="pri" onclick="openEdit()">Создать общую привычку</button></div>`;
+  mine.forEach(sh=>{const ms=members(sh.id),t=today();const tog=togetherStreak(sh);
+    s+=`<div class="card" onclick="openShared('${sh.id}')" style="cursor:pointer"><div class="row"><div class="emo" style="background:${sh.color}33">${sh.emoji}</div><div class="sp"><div class="hn">${esc(sh.name)}</div><div class="sub">${freqText(sh)} · 🤝 серия вместе: ${tog} ${sh.freq.type==='weekly'?'нед.':'дн.'}</div></div></div>
+    <div style="margin-top:10px">${ms.map(u=>{const h=shAsHabit(sh,u),st=streaks(h);return `<div class="row" style="margin-top:6px"><span>${av(u)}</span><span class="sp">${esc(nm(u))}${u===MEK?' (ты)':''}</span><span class="sub">🔥${st.cur}</span><span>${done(h,t)?'✅':(scheduled(h,t)?'⏳':'—')}</span></div>`}).join('')}</div></div>`});
+  if(other.length){s+='<h2>Можно присоединиться</h2>';other.forEach(sh=>{const ms=members(sh.id);
+    s+=`<div class="habit"><div class="emo" style="background:${sh.color}33">${sh.emoji}</div><div class="sp"><div class="hn">${esc(sh.name)}</div><div class="hm">${freqText(sh)} · ${ms.map(u=>av(u)+' '+esc(nm(u))).join(', ')||'никого'}</div></div><button class="pri" onclick="joinShared('${sh.id}')">Вступить</button></div>`})}
+  const fd=SH.feed.slice(0,15);
+  if(fd.length){s+='<h2>Лента</h2><div class="card">'+fd.map(f=>`<div class="row" style="margin:6px 0"><span>${av(f.from)}</span><div class="sp sub"><b style="color:var(--tx)">${esc(nm(f.from))}</b> ${feedText(f)}</div><span class="sub">${ago(f.at)}</span></div>`).join('')+'</div>'}
+  return s+inviteCard();
+}
+function feedText(f){const h=esc(f.hname||'');const to=f.to?(f.to===MEK?'тебя':esc(nm(f.to))):'';
+  return{done:`выполнил(а) ${h}`,join:`присоединился(ась) к ${h}`,create:`создал(а) ${h}`,cheer:`подбадривает ${to} 💪 ${h}`,nudge:`напоминает ${to} ⏰ ${h}`}[f.type]||''}
+function ago(t){const m=Math.floor((Date.now()-t)/6e4);if(m<1)return'сейчас';if(m<60)return m+' мин';const h=Math.floor(m/60);if(h<24)return h+' ч';return Math.floor(h/24)+' дн'}
+function inviteLink(){const o={t:TEAM};if(!FIREBASE_CONFIG)o.c=getCfg();return location.origin+location.pathname+'#join='+b64e(o)}
+function inviteCard(){if(!TEAM)return'';return `<div class="card"><div class="hn">Пригласить друга</div><div class="sub" style="margin-top:6px">Код команды: <b style="color:var(--tx);font-size:16px;letter-spacing:1px">${esc(TEAM)}</b><br>Отправь другу ссылку. Он открывает её в Safari → «Поделиться» → «На экран „Домой“». Если в приложении он не увидит команду — пусть вставит эту ссылку во вкладке «Вместе».</div>
+  <div class="row" style="margin-top:10px"><button class="pri" onclick="shareInvite()">📤 Отправить приглашение</button><button onclick="copyInvite()">📋 Копировать</button></div></div>`}
+async function shareInvite(){const url=inviteLink();if(navigator.share){try{await navigator.share({title:'Привычки вместе',text:'Давай вместе держать привычки! Открой ссылку:',url});return}catch(e){if(e.name==='AbortError')return}}copyInvite()}
+async function copyInvite(){try{await navigator.clipboard.writeText(inviteLink());toast('Ссылка скопирована')}catch(e){openModal(`<div class="hn">Скопируй ссылку</div><textarea rows="5" style="margin-top:8px" onclick="this.select()">${esc(inviteLink())}</textarea><button style="margin-top:8px" onclick="closeModal()">Готово</button>`)}}
+function useInvite(){const inv=parseInvite(document.getElementById('inv').value);if(!inv)return toast('Не похоже на приглашение');
+  if(inv.c&&!FIREBASE_CONFIG)lsSet('hf_cfg',JSON.stringify(inv.c));if(!getCfg())return toast('В этом коде нет настроек сервера — попроси у друга полную ссылку');
+  TEAM=inv.t;lsSet('hf_team',TEAM);startShared()}
+function saveCfg(){const c=parseCfg(document.getElementById('cfg').value);if(!c)return toast('Не удалось прочитать конфиг');lsSet('hf_cfg',JSON.stringify(c));startShared()}
+function newTeam(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let t='';const r=crypto.getRandomValues(new Uint8Array(8));r.forEach(x=>t+=A[x%A.length]);TEAM=t;lsSet('hf_team',t);startShared()}
+function resetShared(){lsSet('hf_cfg',null);lsSet('hf_team',null);TEAM=null;location.reload()}
+function leaveTeam(){if(pl!=='team'){pl='team';toast('Нажми ещё раз, чтобы выйти из команды');setTimeout(()=>pl=null,3000);return}lsSet('hf_team',null);TEAM=null;location.reload()}
+function saveNick(){const n=(document.getElementById('nick').value||'').trim();if(!n)return toast('Введи имя');
+  const e=(document.querySelector('#avs .chip.on')||{}).dataset?.e||'🙂';SH.people[MEK]={nick:n.slice(0,20),emoji:e};
+  w('people/'+MEK,()=>DB.doc('people/'+MEK).set({nick:n.slice(0,20),emoji:e}));render()}
+function renameMe(){const p=SH.people[MEK]||{};openModal(`<div class="row"><h2 class="sp" style="margin:0">Профиль</h2><button class="ghost" onclick="closeModal()">✕</button></div><label>Имя</label><input id="nick" maxlength="20" value="${esc(p.nick||'')}">
+  <div class="chips" style="margin-top:8px" id="avs">${['🙂','😎','🦊','🐼','🐯','🦁','🐸','🐙','🦄','🔥','⚡','🌟'].map(e=>`<div class="chip ${p.emoji===e?'on':''}" data-e="${e}" onclick="document.querySelectorAll('#avs .chip').forEach(c=>c.classList.remove('on'));this.classList.add('on')">${e}</div>`).join('')}</div>
+  <button class="pri" style="width:100%;margin-top:12px" onclick="saveNick();closeModal()">Сохранить</button>`)}
+function saveShared(){
+  const isNew=E.id==='new';const hid=E.sid;
+  const body={name:E.name,emoji:E.emoji,color:E.color,cat:E.cat||'',freq:E.freq,target:E.target||1,unit:E.unit||'',desc:E.desc||'',created:E.created||today(),by:E.by||MEK};
+  SH.habits[hid]={...body,id:hid};
+  w('shared/'+hid,()=>DB.doc('shared/'+hid).set(body));
+  if(isNew){joinShared(hid,true);feed('create',hid)}
+  closeModal();render();toast(isNew?'Общая привычка создана — позови друга 👥':'Сохранено')}
+function joinShared(hid,silent){if(!myNick())return toast('Сначала укажи имя');const k=hid+'__'+MEK;const sh=SH.habits[hid];
+  SH.checks[k]={hid,u:MEK,log:{}};w('checks/'+k,()=>DB.doc('checks/'+k).set({hid,u:MEK,log:{}}));
+  if(!silent){feed('join',hid);toast('Ты в деле! Привычка появилась на экране «Сегодня»')}
+  render()}
+function tickShared(hid,delta){
+  if(selDate>today())return;const sh=SH.habits[hid];const k=hid+'__'+MEK;const c0=SH.checks[k];if(!sh||!c0)return;
+  const log={...(c0.log||{})};const tg=sh.target||1;let c=log[selDate]||0;
+  if(delta===-1)c=Math.max(0,c-1);else if(c>=tg)c=0;else c++;
+  if(c)log[selDate]=c;else delete log[selDate];
+  SH.checks[k]={...c0,log};render();
+  w('checks/'+k,()=>DB.doc('checks/'+k).set({hid,u:MEK,log}));
+  if(c===tg&&delta!==-1){if(selDate===today())feed('done',hid);
+    const st=streaks(shAsHabit(sh));if([3,7,14,21,30,50,66,100,200,365].includes(st.cur))toast(`🔥 Серия ${st.cur} ${st.unit} — «${sh.name}»!`);
+    const ms=members(hid);if(ms.length>1&&ms.every(u=>done(shAsHabit(sh,u),selDate)))setTimeout(()=>toast('🤝 Все выполнили сегодня — серия вместе растёт!'),1200)}
+}
+function togetherStreak(sh){const ms=members(sh.id);if(!ms.length)return 0;
+  const hs=ms.map(u=>shAsHabit(sh,u));const log={};
+  const created=hs.reduce((a,h)=>a,sh.created);
+  for(let d=sh.created;d<=today();d=add(d,1))if(hs.every(h=>done(h,d)))log[d]=sh.target||1;
+  return streaks({...sh,log}).cur}
+function togetherBest(sh){const ms=members(sh.id);if(!ms.length)return 0;const hs=ms.map(u=>shAsHabit(sh,u));const log={};
+  for(let d=sh.created;d<=today();d=add(d,1))if(hs.every(h=>done(h,d)))log[d]=sh.target||1;return streaks({...sh,log}).best}
+function openShared(hid){openSh=hid;showShared(hid)}
+function showShared(hid){
+  const sh=SH.habits[hid];if(!sh){closeModal();return}
+  const ms=members(hid),t=today(),me=SH.checks[hid+'__'+MEK];const unit=sh.freq.type==='weekly'?'нед.':'дн.';
+  let s=`<div class="row"><div class="emo" style="background:${sh.color}33">${sh.emoji}</div><div class="sp"><h2 style="margin:0">👥 ${esc(sh.name)}</h2><div class="sub">${freqText(sh)}${sh.target>1?' · '+sh.target+' '+esc(sh.unit):''}</div></div><button class="ghost" onclick="openSh=null;closeModal()">✕</button></div>`;
+  if(sh.desc)s+=`<p class="sub">${esc(sh.desc)}</p>`;
+  s+=`<div class="stats" style="margin-top:12px"><div class="stat"><b>🤝 ${togetherStreak(sh)}</b><small>Серия вместе, ${unit}</small></div><div class="stat"><b>🏅 ${togetherBest(sh)}</b><small>Рекорд вместе, ${unit}</small></div><div class="stat"><b>${ms.length}</b><small>Участников</small></div></div>`;
+  // рейтинг
+  const rows=ms.map(u=>{const h=shAsHabit(sh,u);const st=streaks(h);return{u,h,st,r:rate(h),w:weekDone(h,weekStart(t))}}).sort((a,b)=>b.w-a.w||b.r-a.r);
+  s+=`<div class="card"><div class="hn" style="margin-bottom:6px">Рейтинг недели</div>${rows.map((x,i)=>`<div class="row" style="margin-top:10px"><span style="width:22px">${['🥇','🥈','🥉'][i]||(i+1)}</span><span style="font-size:20px">${av(x.u)}</span><div class="sp"><div>${esc(nm(x.u))}${x.u===MEK?' (ты)':''}</div><div class="sub">🔥${x.st.cur} · рекорд ${x.st.best} · 30 дн.: ${x.r}%</div></div><b>${x.w}</b><span class="sub">за нед.</span></div>`).join('')}</div>`;
+  // тепловые карты
+  const st4=add(weekStart(t),-21);
+  s+=`<div class="card"><div class="hn" style="margin-bottom:8px">Последние 4 недели</div>${rows.map(x=>`<div class="row" style="margin:6px 0"><span title="${esc(nm(x.u))}">${av(x.u)}</span><div style="display:grid;grid-template-columns:repeat(28,1fr);gap:2px;flex:1">${[...Array(28)].map((_,i)=>{const d=add(st4,i);const p=Math.min(1,cnt(x.h,d)/(sh.target||1));return `<i style="aspect-ratio:1;border-radius:2px;background:${p?sh.color:'var(--card2)'};opacity:${p?.35+.65*p:1};${d===t?'outline:1px solid var(--acc)':''}"></i>`}).join('')}</div></div>`).join('')}</div>`;
+  // подбодрить
+  const fr=ms.filter(u=>u!==MEK);
+  if(fr.length&&me)s+=`<div class="card"><div class="hn">Поддержать друга</div>${fr.map(u=>{const h=shAsHabit(sh,u);const ok=done(h,t);return `<div class="row" style="margin-top:8px"><span>${av(u)} ${esc(nm(u))} ${ok?'✅':'⏳'}</span><span class="sp"></span><button onclick="cheer('${hid}','${u}','cheer')">💪</button>${ok?'':`<button onclick="cheer('${hid}','${u}','nudge')">⏰ Напомнить</button>`}</div>`}).join('')}</div>`;
+  if(!fr.length)s+=`<div class="card sub">Пока ты один в этой привычке. Пригласи друга — инструкция во вкладке «Вместе».</div>`;
+  s+=`<div class="row" style="margin-top:14px;flex-wrap:wrap">${me?`<button class="pri" onclick="selDate=today();tickShared('${hid}');showShared('${hid}')">${me&&done(shAsHabit(sh),t)?'Снять отметку':'✓ Отметить сегодня'}</button><button onclick="openEdit('s:${hid}')">✏️</button><button onclick="leaveShared('${hid}')">Выйти</button>`:`<button class="pri" onclick="joinShared('${hid}')">Вступить</button>`}${sh.by===MEK?`<button class="danger" onclick="delShared('${hid}')">Удалить</button>`:''}</div>`;
+  openModal(s);
+}
+function cheer(hid,u,type){feed(type,hid,u);toast(type==='cheer'?`Отправлено ${nm(u)} 💪`:`Напоминание отправлено ${nm(u)} ⏰`)}
+let pl=null;
+function leaveShared(hid){if(pl!==hid){pl=hid;toast('Нажми «Выйти» ещё раз — твои отметки в этой привычке удалятся');setTimeout(()=>pl=null,3000);return}
+  const k=hid+'__'+MEK;delete SH.checks[k];w('checks/'+k,()=>DB.doc('checks/'+k).delete());openSh=null;closeModal();render()}
+function delShared(hid){if(pl!=='d'+hid){pl='d'+hid;toast('Нажми «Удалить» ещё раз — привычка удалится у всех');setTimeout(()=>pl=null,3000);return}
+  Object.keys(SH.checks).filter(k=>SH.checks[k].hid===hid).forEach(k=>{delete SH.checks[k];w('checks/'+k,()=>DB.doc('checks/'+k).delete())});
+  delete SH.habits[hid];w('shared/'+hid,()=>DB.doc('shared/'+hid).delete());openSh=null;closeModal();render();toast('Общая привычка удалена')}
+
+// ===== Уведомления и офлайн =====
+async function askNotif(){if(typeof Notification==='undefined')return toast('Добавь приложение на экран «Домой» и открой оттуда');
+  const p=await Notification.requestPermission();toast(p==='granted'?'Уведомления включены 🔔':'Уведомления не разрешены');render()}
+async function notify(text){try{if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
+  const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
+  if(r)r.showNotification('Привычки',{body:text,icon:'icon.png',badge:'icon.png'});else new Notification('Привычки',{body:text})}catch(e){}}
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+// ===== Модалка, тосты, напоминания =====
+function openModal(h){document.getElementById('sheet').innerHTML=h;document.getElementById('modal').classList.add('on')}
+function closeModal(){document.getElementById('modal').classList.remove('on')}
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',3200)}
+const fired={};
+setInterval(()=>{const n=new Date(),hm=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'),t=today();
+  active().forEach(h=>{if(h.reminder===hm&&scheduled(h,t)&&!done(h,t)&&!fired[h.id+t+hm]){fired[h.id+t+hm]=1;toast(`⏰ Пора: ${h.emoji} ${h.name}`);notify(`⏰ Пора: ${h.emoji} ${h.name}`)}});
+  if(selDate!==t&&!document.getElementById('modal').classList.contains('on')&&S.tab==='today'&&n.getHours()===0&&n.getMinutes()===0){selDate=t;render()}
+},20000);
+render();
+</script>
+</body>
+</html>

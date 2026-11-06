@@ -1,0 +1,12 @@
+.venv
+venv
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+__pycache__
+*.pyc
+data/
+README.md
+deploy/

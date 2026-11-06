@@ -1,0 +1,12 @@
+services:
+  bot:
+    build: .
+    image: telegram-deleted-messages-bot
+    container_name: deleted-messages-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # перекрывает DB_PATH из .env — база хранится в томе ./data
+      DB_PATH: /data/messages.db
+    volumes:
+      - ./data:/data

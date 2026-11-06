@@ -103,6 +103,8 @@ python bot.py
 | `bot.py`          | Логика бота и обработчики бизнес-событий                |
 | `storage.py`      | Хранилище на SQLite (подключения и сообщения)           |
 | `requirements.txt`| Зависимости                                             |
+| `Dockerfile`, `docker-compose.yml` | Запуск в Docker                        |
+| `deploy/telegram-deleted-bot.service` | Unit для systemd                   |
 
 События Telegram, которые обрабатывает бот:
 
@@ -110,6 +112,43 @@ python bot.py
 - `business_message` — новое сообщение в вашем чате → сохраняем копию;
 - `edited_business_message` — редактирование → обновляем копию;
 - `deleted_business_messages` — удаление → присылаем сохранённую копию вам.
+
+---
+
+## 🖥 Постоянная работа на сервере
+
+Бот должен работать непрерывно, иначе события об удалении не придут.
+
+### Вариант A — Docker Compose (проще всего)
+
+```bash
+cd telegram-deleted-messages-bot
+cp .env.example .env          # впишите BOT_TOKEN
+docker compose up -d --build
+```
+
+База хранится в `./data/messages.db` (том пробрасывается наружу и переживает
+пересборку). Логи: `docker compose logs -f`. Остановить: `docker compose down`.
+
+### Вариант B — systemd (без Docker)
+
+```bash
+sudo useradd -r -s /usr/sbin/nologin botuser
+sudo mkdir -p /opt/telegram-deleted-messages-bot
+sudo cp -r . /opt/telegram-deleted-messages-bot/
+cd /opt/telegram-deleted-messages-bot
+sudo python3 -m venv .venv
+sudo .venv/bin/pip install -r requirements.txt
+sudo cp .env.example .env     # впишите BOT_TOKEN
+sudo chown -R botuser:botuser /opt/telegram-deleted-messages-bot
+
+sudo cp deploy/telegram-deleted-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now telegram-deleted-bot
+```
+
+Статус и логи: `systemctl status telegram-deleted-bot`,
+`journalctl -u telegram-deleted-bot -f`.
 
 ---
 

@@ -1,0 +1,20 @@
+[Unit]
+Description=Telegram deleted-messages bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Куда вы распаковали бота:
+WorkingDirectory=/opt/telegram-deleted-messages-bot
+EnvironmentFile=/opt/telegram-deleted-messages-bot/.env
+# Путь к python из виртуального окружения (создайте его: python -m venv .venv)
+ExecStart=/opt/telegram-deleted-messages-bot/.venv/bin/python bot.py
+Restart=on-failure
+RestartSec=5
+# Запуск от непривилегированного пользователя (создайте его заранее):
+User=botuser
+Group=botuser
+
+[Install]
+WantedBy=multi-user.target
